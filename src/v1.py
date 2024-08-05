@@ -1,10 +1,6 @@
-import numpy as np
+
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
-from darts import TimeSeries
-from darts.ad import ForecastingAnomalyModel, NormScorer
-from darts.models import TCNModel
 
 
 # reading test data set
