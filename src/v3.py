@@ -1,235 +1,135 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
+from sklearn.model_selection import train_test_split
 from darts import TimeSeries
-from darts.ad.utils import (
-    eval_metric_from_binary_prediction,
-    eval_metric_from_scores,
-    show_anomalies_from_scores,
-)
-from darts.ad import (
-    ForecastingAnomalyModel,
-    KMeansScorer,
-    NormScorer,
-    WassersteinScorer,
-)
-from darts.dataprocessing.transformers import Scaler
-from darts.datasets import TaxiNewYorkDataset
-from darts.metrics import mae, rmse
 from darts.models import TCNModel
-from darts.ad.detectors import QuantileDetector
+from darts.metrics import mape
 
-# Load and visualize the data
-series_taxi = TaxiNewYorkDataset().load()
+# Load the dataset
+train_data = pd.read_csv(
+    "C:/Users/omerk/PycharmProjects/Time_Series-Anomaly-Detection-/ECG5000_Dataset/ECG5000_TRAIN.txt", sep='\s+',
+    header=None)
+test_data = pd.read_csv(
+    "C:/Users/omerk/PycharmProjects/Time_Series-Anomaly-Detection-/ECG5000_Dataset/ECG5000_TEST.txt", sep='\s+',
+    header=None)
 
-# Define start and end dates for some known anomalies
-anomalies_day = {
-    "NYC Marathon": ("2014-11-02 00:00", "2014-11-02 23:30"),
-    "Thanksgiving": ("2014-11-27 00:00", "2014-11-27 23:30"),
-    "Christmas": ("2014-12-24 00:00", "2014-12-25 23:30"),
-    "New Years": ("2014-12-31 00:00", "2015-01-01 23:30"),
-    "Snow Blizzard": ("2015-01-26 00:00", "2015-01-27 23:30"),
-}
-anomalies_day = {
-    k: (pd.Timestamp(v[0]), pd.Timestamp(v[1])) for k, v in anomalies_day.items()
-}
+# Merge the training and test datasets
+merged_data = pd.concat([train_data, test_data], axis=0).reset_index(drop=True)
 
-# Create a series with the binary anomaly flags
-anomalies = pd.Series([0] * len(series_taxi), index=series_taxi.time_index)
-for start, end in anomalies_day.values():
-    anomalies.loc[(start <= anomalies.index) & (anomalies.index <= end)] = 1.0
+# Define normal and anomalous classes
+normal_class_label = 1
 
-series_taxi_anomalies = TimeSeries.from_series(anomalies)
+# Split the data into normal and anomalous
+normal_data = merged_data[merged_data[0] == normal_class_label]
+anomalous_data = merged_data[merged_data[0] != normal_class_label]
 
-# Plot the data and the anomalies
-fig, ax = plt.subplots(figsize=(15, 5))
-series_taxi.plot(label="Number of taxi passengers", linewidth=1, color="#6464ff")
-(series_taxi_anomalies * 10000).plot(label="5 known anomalies", color="r", linewidth=1)
-plt.show()
+# Combine normal and anomalous data
+combined_data = pd.concat([normal_data, anomalous_data], axis=0).reset_index(drop=True)
 
-def plot_anom(selected_anomaly, delta_plotted_days):
-    one_day = series_taxi.freq * 24 * 2
-    anomaly_date = anomalies_day[selected_anomaly][0]
-    start_timestamp = anomaly_date - delta_plotted_days * one_day
-    end_timestamp = anomaly_date + (delta_plotted_days + 1) * one_day
+# Split combined data into features and labels
+X_combined = combined_data.iloc[:, 1:].values
+y_combined = combined_data.iloc[:, 0].values
 
-    series_taxi[start_timestamp:end_timestamp].plot(
-        label="Number of taxi passengers", color="#6464ff", linewidth=0.8
-    )
-    (series_taxi_anomalies[start_timestamp:end_timestamp] * 10000).plot(
-        label="Known anomaly", color="r", linewidth=0.8
-    )
-    plt.title(selected_anomaly)
-    plt.show()
+# Split the combined data into training, validation, and test sets
+X_train, X_temp, y_train, y_temp = train_test_split(X_combined, y_combined, test_size=0.4, random_state=42,
+                                                    stratify=y_combined)
+X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp)
 
-for anom_name in anomalies_day:
-    plot_anom(anom_name, 3)
-    break  # remove this to see all anomalies
 
-# Split the data into training and testing sets
-s_taxi_train = series_taxi[:4500]
-s_taxi_test = series_taxi[4500:]
-
-# Add covariates (hour and day of the week)
-add_encoders = {
-    "cyclic": {"future": ["hour", "dayofweek"]},
-}
-
-# One week corresponds to (7 days * 24 hours * 2) of 30 minutes
-one_week = 7 * 24 * 2
-
-# Train a TCN forecasting model
-forecasting_model = TCNModel(
-    input_chunk_length=one_week,
-    output_chunk_length=1,
-    kernel_size=2,
-    num_filters=3,
-    dropout=0.1,
-    weight_norm=True,
-    add_encoders=add_encoders,
-    n_epochs=100,
-)
-forecasting_model.fit(s_taxi_train)
-
-# Instantiate the anomaly model with: one fitted model, and 3 scorers
-half_a_day = 2 * 12
-full_day = 2 * 24
-
-anomaly_model = ForecastingAnomalyModel(
-    model=forecasting_model,
-    scorer=[
-        NormScorer(ord=1),
-        WassersteinScorer(window=half_a_day, window_agg=False),
-        WassersteinScorer(window=full_day, window_agg=True),
-    ],
-)
-
-# Fit the anomaly model
-START = 0.1
-anomaly_model.fit(s_taxi_train, start=START, allow_model_training=False, verbose=True)
-
-# Compute anomaly scores on the test set
-anomaly_scores, model_forecasting = anomaly_model.score(
-    s_taxi_test, start=START, return_model_prediction=True, verbose=True
-)
-
-pred_start = model_forecasting.start_time()
-print(
-    "On testing set -> MAE: {}, RMSE: {}".format(
-        mae(model_forecasting, s_taxi_test), rmse(model_forecasting, s_taxi_test)
-    )
-)
-
-# Plot the data and the anomalies
-fig, ax = plt.subplots(figsize=(15, 5))
-s_taxi_test.plot(label="Number of taxi passengers")
-model_forecasting.plot(label="Prediction of the model", linewidth=0.9)
-plt.show()
-
-# Evaluate the anomaly model
-metric_names = ["AUC_ROC", "AUC_PR"]
-metric_data = []
-for metric_name in metric_names:
-    metric_data.append(
-        anomaly_model.eval_metric(
-            anomalies=series_taxi_anomalies,
-            series=s_taxi_test,
-            start=START,
-            metric=metric_name,
+# Convert the data to TimeSeries format
+def convert_to_timeseries(X, y):
+    timeseries_list = []
+    for i in range(X.shape[0]):
+        series = TimeSeries.from_times_and_values(
+            pd.date_range(start="2020-01-01", periods=X.shape[1], freq='ms'),
+            X[i]
         )
-    )
-pd.DataFrame(data=metric_data, index=metric_names).T
+        timeseries_list.append(series)
+    return timeseries_list
 
-# Visualize the results
-anomaly_model.show_anomalies(
-    series=s_taxi_test,
-    anomalies=series_taxi_anomalies[pred_start:],
-    start=START,
-    metric="AUC_ROC",
-)
 
-# Use a QuantileDetector to convert anomaly scores to binary predictions
-contamination = 0.95
-detector = QuantileDetector(high_quantile=contamination)
+train_series = convert_to_timeseries(X_train, y_train)
+val_series = convert_to_timeseries(X_val, y_val)
+test_series = convert_to_timeseries(X_test, y_test)
 
-# Use the anomaly score that gave the best AUC ROC score: Wasserstein anomaly score with a window of 'full_day'
-best_anomaly_score = anomaly_scores[-1]
+# Create a TCN model
+model = TCNModel(input_chunk_length=20, output_chunk_length=1, n_epochs=10, random_state=42)
 
-# Fit and detect on the anomaly scores, it will return a binary prediction
-anomaly_pred = detector.fit_detect(series=best_anomaly_score)
+# Implement early stopping manually
+best_val_loss = float('inf')
+patience = 3
+patience_counter = 0
 
-# Plot the binary prediction
-fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
-anomaly_pred.plot(label="Prediction", ax=ax1)
-series_taxi_anomalies[anomaly_pred.start_time() :].plot(
-    label="Known anomalies", ax=ax2, color="red"
-)
-fig.tight_layout()
+for epoch in range(model.n_epochs/2):
+    print(f"Epoch {epoch + 1}/{model.n_epochs}")
+    model.fit(series=train_series, val_series=val_series)
 
-for metric_name in ["accuracy", "precision", "recall", "f1"]:
-    metric_val = detector.eval_metric(
-        pred_scores=best_anomaly_score,
-        anomalies=series_taxi_anomalies,
-        window=full_day,
-        metric=metric_name,
-    )
-    print(metric_name + f": {metric_val:.2f}/1")
+    # Evaluate the model on the validation set
+    val_predictions = [model.predict(n=len(ts), series=ts) for ts in val_series]
 
-# Internal methods for evaluation and visualization
-windows = [1, half_a_day, full_day]
-scorer_names = [f"{scorer}_{w}" for scorer, w in zip(anomaly_model.scorers, windows)]
+    val_target_values = np.concatenate([ts.values() for ts in val_series])
+    val_predicted_values = np.concatenate([ts.values() for ts in val_predictions])
 
-metric_data = {"AUC_ROC": [], "AUC_PR": []}
-for metric_name in metric_data:
-    metric_data[metric_name] = eval_metric_from_scores(
-        anomalies=series_taxi_anomalies,
-        pred_scores=anomaly_scores,
-        window=windows,
-        metric=metric_name,
-    )
+    current_val_loss = mape(TimeSeries.from_values(val_target_values), TimeSeries.from_values(val_predicted_values))
 
-pd.DataFrame(index=scorer_names, data=metric_data)
+    print(f"Validation MAPE: {current_val_loss}")
 
-# Visualize the anomalies with pre-computed scores
-show_anomalies_from_scores(
-    series=s_taxi_test,
-    anomalies=series_taxi_anomalies[pred_start:],
-    pred_scores=anomaly_scores,
-    pred_series=model_forecasting,
-    window=windows,
-    title="Anomaly results using a forecasting method",
-    names_of_scorers=scorer_names,
-    metric="AUC_ROC",
-)
+    if current_val_loss < best_val_loss:
+        best_val_loss = current_val_loss
+        patience_counter = 0
+        model.save("tcn_ecg5000_model.pth")
+    else:
+        patience_counter += 1
 
-# Zoom in on each anomaly
-def plot_anom_eval(selected_anomaly, delta_plotted_days):
-    one_day = series_taxi.freq * 24 * 2
-    anomaly_date = anomalies_day[selected_anomaly][0]
-    start = anomaly_date - one_day * delta_plotted_days
-    end = anomaly_date + one_day * (delta_plotted_days + 1)
+    if patience_counter >= patience:
+        print("Early stopping triggered")
+        break
 
-    # Input series and forecasts
-    series_taxi[start:end].plot(
-        label="Number of taxi passengers", color="#6464ff", linewidth=0.8
-    )
-    model_forecasting[start:end].plot(
-        label="Model prediction", color="green", linewidth=0.8
-    )
+# Load the best model
+model.load("tcn_ecg5000_model.pth")
 
-    # Actual anomalies and predicted scores
-    (series_taxi_anomalies[start:end] * 10000).plot(
-        label="Known anomaly", color="r", linewidth=0.8
-    )
-    # Scaler transforms scores in [0, 1] for better visualization
-    scaler = Scaler()
-    best_anomaly_score_scaled = scaler.fit_transform(best_anomaly_score)
-    (best_anomaly_score_scaled[start:end] * 5000).plot(
-        label="Anomaly score", color="purple", linewidth=0.8
-    )
+# Prepare test data for prediction
+test_predictions = [model.predict(n=len(ts), series=ts) for ts in test_series]
 
-    plt.title(selected_anomaly)
-    plt.show()
 
-for anom_name in anomalies_day:
-    plot_anom_eval(anom_name, 3)
+# Compute anomaly scores based on prediction errors
+def compute_anomaly_scores(target_series, predicted_series):
+    anomaly_scores = []
+    for ts, pred in zip(target_series, predicted_series):
+        residuals = ts.values() - pred.values()
+        scores = np.abs(residuals)
+        anomaly_scores.append(TimeSeries.from_times_and_values(ts.time_index, scores))
+    return anomaly_scores
+
+
+anomaly_scores = compute_anomaly_scores(test_series, test_predictions)
+
+
+# Threshold to create binary anomalies
+def threshold_anomalies(anomaly_scores, threshold=0.5):
+    binary_anomalies = []
+    for score_ts in anomaly_scores:
+        binary = score_ts.values() > threshold
+        binary_anomalies.append(TimeSeries.from_times_and_values(score_ts.time_index, binary.astype(int)))
+    return binary_anomalies
+
+
+binary_anomalies = threshold_anomalies(anomaly_scores)
+
+# Print results
+for i, ts in enumerate(binary_anomalies):
+    print(f"Anomaly Binary Time Series {i}:")
+    print(ts)
+
+
+# Optional: Aggregate binary anomalies if needed (example for a simple average)
+def aggregate_anomalies(binary_anomalies):
+    aggregated = np.mean([ts.values() for ts in binary_anomalies], axis=0)
+    time_index = binary_anomalies[0].time_index
+    return TimeSeries.from_times_and_values(time_index, aggregated)
+
+
+
+aggregated_anomalies = aggregate_anomalies(binary_anomalies)
+print("Aggregated Anomalies:")
+print(aggregated_anomalies)
