@@ -129,6 +129,7 @@ def aggregate_anomalies(binary_anomalies):
     return TimeSeries.from_times_and_values(time_index, aggregated)
 
 
+
 aggregated_anomalies = aggregate_anomalies(binary_anomalies)
 print("Aggregated Anomalies:")
 print(aggregated_anomalies)
