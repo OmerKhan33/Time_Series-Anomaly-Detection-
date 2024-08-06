@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 # Load the dataset
-train_data = pd.read_csv("ECG5000_Dataset/ECG5000_TRAIN.txt", delim_whitespace=True, header=None)
+train_data = pd.read_csv("C:/Users/omerk/PycharmProjects/Time_Series-Anomaly-Detection-/ECG5000_Dataset/ECG5000_TRAIN.txt", delim_whitespace=True, header=None)
 test_data = pd.read_csv("ECG5000_Dataset/ECG5000_TEST.txt", delim_whitespace=True, header=None)
 
 # Merge the training and test datasets
