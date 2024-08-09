@@ -1,135 +1,88 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from darts import TimeSeries
-from darts.models import TCNModel
-from darts.metrics import mape
-
-# Load the dataset
-train_data = pd.read_csv(
-    "C:/Users/omerk/PycharmProjects/Time_Series-Anomaly-Detection-/ECG5000_Dataset/ECG5000_TRAIN.txt", sep='\s+',
-    header=None)
-test_data = pd.read_csv(
-    "C:/Users/omerk/PycharmProjects/Time_Series-Anomaly-Detection-/ECG5000_Dataset/ECG5000_TEST.txt", sep='\s+',
-    header=None)
-
-# Merge the training and test datasets
-merged_data = pd.concat([train_data, test_data], axis=0).reset_index(drop=True)
-
-# Define normal and anomalous classes
-normal_class_label = 1
-
-# Split the data into normal and anomalous
-normal_data = merged_data[merged_data[0] == normal_class_label]
-anomalous_data = merged_data[merged_data[0] != normal_class_label]
-
-# Combine normal and anomalous data
-combined_data = pd.concat([normal_data, anomalous_data], axis=0).reset_index(drop=True)
-
-# Split combined data into features and labels
-X_combined = combined_data.iloc[:, 1:].values
-y_combined = combined_data.iloc[:, 0].values
-
-# Split the combined data into training, validation, and test sets
-X_train, X_temp, y_train, y_temp = train_test_split(X_combined, y_combined, test_size=0.4, random_state=42,
-                                                    stratify=y_combined)
-X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp)
-
-
-# Convert the data to TimeSeries format
-def convert_to_timeseries(X, y):
-    timeseries_list = []
-    for i in range(X.shape[0]):
-        series = TimeSeries.from_times_and_values(
-            pd.date_range(start="2020-01-01", periods=X.shape[1], freq='ms'),
-            X[i]
-        )
-        timeseries_list.append(series)
-    return timeseries_list
-
-
-train_series = convert_to_timeseries(X_train, y_train)
-val_series = convert_to_timeseries(X_val, y_val)
-test_series = convert_to_timeseries(X_test, y_test)
-
-# Create a TCN model
-model = TCNModel(input_chunk_length=20, output_chunk_length=1, n_epochs=10, random_state=42)
-
-# Implement early stopping manually
-best_val_loss = float('inf')
-patience = 3
-patience_counter = 0
-
-for epoch in range(model.n_epochs/2):
-    print(f"Epoch {epoch + 1}/{model.n_epochs}")
-    model.fit(series=train_series, val_series=val_series)
-
-    # Evaluate the model on the validation set
-    val_predictions = [model.predict(n=len(ts), series=ts) for ts in val_series]
-
-    val_target_values = np.concatenate([ts.values() for ts in val_series])
-    val_predicted_values = np.concatenate([ts.values() for ts in val_predictions])
-
-    current_val_loss = mape(TimeSeries.from_values(val_target_values), TimeSeries.from_values(val_predicted_values))
-
-    print(f"Validation MAPE: {current_val_loss}")
-
-    if current_val_loss < best_val_loss:
-        best_val_loss = current_val_loss
-        patience_counter = 0
-        model.save("tcn_ecg5000_model.pth")
-    else:
-        patience_counter += 1
-
-    if patience_counter >= patience:
-        print("Early stopping triggered")
-        break
-
-# Load the best model
-model.load("tcn_ecg5000_model.pth")
-
-# Prepare test data for prediction
-test_predictions = [model.predict(n=len(ts), series=ts) for ts in test_series]
-
-
-# Compute anomaly scores based on prediction errors
-def compute_anomaly_scores(target_series, predicted_series):
-    anomaly_scores = []
-    for ts, pred in zip(target_series, predicted_series):
-        residuals = ts.values() - pred.values()
-        scores = np.abs(residuals)
-        anomaly_scores.append(TimeSeries.from_times_and_values(ts.time_index, scores))
-    return anomaly_scores
-
-
-anomaly_scores = compute_anomaly_scores(test_series, test_predictions)
-
-
-# Threshold to create binary anomalies
-def threshold_anomalies(anomaly_scores, threshold=0.5):
-    binary_anomalies = []
-    for score_ts in anomaly_scores:
-        binary = score_ts.values() > threshold
-        binary_anomalies.append(TimeSeries.from_times_and_values(score_ts.time_index, binary.astype(int)))
-    return binary_anomalies
-
-
-binary_anomalies = threshold_anomalies(anomaly_scores)
-
-# Print results
-for i, ts in enumerate(binary_anomalies):
-    print(f"Anomaly Binary Time Series {i}:")
-    print(ts)
-
-
-# Optional: Aggregate binary anomalies if needed (example for a simple average)
-def aggregate_anomalies(binary_anomalies):
-    aggregated = np.mean([ts.values() for ts in binary_anomalies], axis=0)
-    time_index = binary_anomalies[0].time_index
-    return TimeSeries.from_times_and_values(time_index, aggregated)
+from sklearn.preprocessing import RobustScaler
+import warnings
+warnings.filterwarnings('ignore')
 
 
 
-aggregated_anomalies = aggregate_anomalies(binary_anomalies)
-print("Aggregated Anomalies:")
-print(aggregated_anomalies)
+train_df = pd.read_csv("../ECG5000_Dataset/ECG5000_TRAIN.txt", delimiter='\s+', header=None)
+test_df = pd.read_csv("../ECG5000_Dataset/ECG5000_TEST.txt", delimiter='\s+', header=None)
+
+# Remove the label column
+normal_data = pd.read_csv('../ECG5000_Dataset/ecg5000_Normal.csv')
+normal_data.drop(normal_data.columns[0], axis=1, inplace=True)
+normal_data.head()
+
+# Split data into train, valdidation, and test
+
+
+# Split into training and remaining (test + validation)
+train_data, temp_data = train_test_split(normal_data, test_size=0.3, random_state=42)
+
+# Split the remaining data into test and validation
+test_data, validation_data = train_test_split(temp_data, test_size=0.5, random_state=42)
+
+# Print the shapes of the datasets
+print(f"Training Data Shape: {train_data.shape}")
+print(f"Validation Data Shape: {validation_data.shape}")
+print(f"Test Data Shape: {test_data.shape}")
+
+# Normalize the data using RobustScaler
+
+# Initialize RobustScaler
+scaler = RobustScaler()
+
+# Fit on training data and transform train, validation, and test sets
+train_features_scaled = scaler.fit_transform(train_data)
+validation_features_scaled = scaler.transform(validation_data)
+test_features_scaled = scaler.transform(test_data)
+
+# Convert scaled features back to DataFrames if needed
+train_data_scaled = pd.DataFrame(train_features_scaled, columns=train_data.columns)
+validation_data_scaled = pd.DataFrame(validation_features_scaled, columns=validation_data.columns)
+test_data_scaled = pd.DataFrame(test_features_scaled, columns=test_data.columns)
+
+# Print the shapes of the scaled datasets
+print(f"Scaled Training Data Shape: {train_data_scaled.shape}")
+print(f"Scaled Validation Data Shape: {validation_data_scaled.shape}")
+print(f"Scaled Test Data Shape: {test_data_scaled.shape}")
+
+#%% Histogram of scaled data
+plt.figure(figsize=(10, 5))
+plt.hist(train_data_scaled, bins=75, alpha=0.7, label='Normalised Train')
+plt.hist(validation_data_scaled, bins=75, alpha=0.7, label='Normalised Validation')
+plt.hist(test_data_scaled, bins=75, alpha=0.7, label='Normalised Test')
+plt.xlabel('Amplitude')
+plt.ylabel('Frequency')
+plt.title('Histogram of ECG Signal Amplitudes')
+plt.legend()
+plt.show()
+
+# Remove index
+train_data_scaled.reset_index(drop=True, inplace=True)
+validation_data_scaled.reset_index(drop=True, inplace=True)
+test_data_scaled.reset_index(drop=True, inplace=True)
+train_data_scaled.head()
+validation_data_scaled.head()
+test_data_scaled.head()
+
+# Printing infos
+train_data_scaled.info()
+validation_data_scaled.info()
+test_data_scaled.info()
+
+# Convert Datasets to TimeSeries
+train_series = TimeSeries.from_dataframe(train_data_scaled)
+validation_series = TimeSeries.from_dataframe(validation_data_scaled)
+test_series = TimeSeries.from_dataframe(test_data_scaled)
+train_series = train_series.astype(np.float32)
+validation_series = validation_series.astype(np.float32)
+
+# Displaying the first 5 rows of dataframes after adding TimeSeries
+train_series.head(5)
+validation_series.head(5)
+test_series.head(5)
