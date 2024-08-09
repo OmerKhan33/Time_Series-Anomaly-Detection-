@@ -1,0 +1,29 @@
+dilation_base: 2
+dropout: 0.2
+input_chunk_length: 50
+input_size: 140
+kernel_size: 3
+likelihood: null
+lr_scheduler_cls: null
+lr_scheduler_kwargs: null
+nr_params: 1
+num_filters: 32
+num_layers: 3
+optimizer_cls: !!python/name:torch.optim.adam.Adam ''
+optimizer_kwargs:
+  lr: 0.001
+output_chunk_length: 30
+output_chunk_shift: 0
+target_length: 30
+target_size: 140
+train_sample_shape:
+- !!python/tuple
+  - 50
+  - 140
+- null
+- null
+- !!python/tuple
+  - 50
+  - 140
+use_reversible_instance_norm: false
+weight_norm: false
