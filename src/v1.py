@@ -1,46 +1,45 @@
 
 import pandas as pd
-import seaborn as sns
+
+
+# reading train.txt file
+Train_df = pd.read_csv("ECG5000_Dataset/ECG5000_TRAIN.txt")
+print("Training Data:")
+print(Train_df)
 
 
 # reading test data set
-df_test = pd.read_csv("ECG5000_Dataset/ECG5000_TEST.txt")
+Test_df = pd.read_csv("ECG5000_Dataset/ECG5000_TEST.txt")
 print("Testing Data:")
-print(df_test)
-
-# reading train.txt file
-df_train = pd.read_csv("ECG5000_Dataset/ECG5000_TRAIN.txt")
-print("Training Data:")
-print(df_train)
-
+print(Test_df)
 
 # Check for shape values in both datasets
-print(f"The shape of Test : {df_test.shape} ")
-print(f"The shape of Train : {df_train.shape}")
+print(f"The shape of Test : {Test_df.shape} ")
+print(f"The shape of Train : {Train_df.shape}")
 
 # Check for null values in both datasets
-print(f"The null values in Test are: {df_test.isnull().sum()}")
-print(f"The null values in Train are: {df_train.isnull().sum()}")
+print(f"The null values in Test are: {Test_df.isnull().sum()}")
+print(f"The null values in Train are: {Train_df.isnull().sum()}")
 
 # print some head values
 print("First few rows of Test Data:")
-print(df_test.head())
+print(Test_df.head())
 print("First few rows of Training Data:")
-print(df_train.head())
+print(Train_df.head())
 
 
-if df_test.isnull().sum() > 0:
+if Test_df.isnull().sum() > 0:
     print("There are Null values Test data set")
 else:
     print("There no NULL values Test Data set")
 
-if df_train.isnull().sum() > 0:
+if Train_df.isnull().sum() > 0:
     print("There are Null values in Train dataset")
 else:
     print("There no NULL values in Train dataset")
 
-train_duplicates = df_train.duplicated().sum()
-test_duplicates = df_test.duplicated().sum()
+train_duplicates = Train_df.duplicated().sum()
+test_duplicates = Test_df.duplicated().sum()
 
 print(f"Duplicate rows in Training Data: {train_duplicates}")
 print(f"Duplicate rows in Test Data: {test_duplicates}")
@@ -58,16 +57,16 @@ else:
 
 # Explore basic statistics of the datasets
 print("Training Data Statistics:")
-print(df_train.describe())
+print(Train_df.describe())
 print("Test Data Statistics:")
-print(df_test.describe())
+print(Test_df.describe())
 
 # Label count for the first column of datasets
-train_label_counts = df_train[0].value_counts()
+train_label_counts = Train_df[0].value_counts()
 print("Label Count for Training Data:")
 print(train_label_counts)
 
-test_label_counts = df_test[0].value_counts()
+test_label_counts = Test_df[0].value_counts()
 print("Label Count for Testing Data:")
 print(test_label_counts)
 
@@ -81,9 +80,10 @@ print(f"Number of normal instances in Training Data: {train_normal_count}")
 print(f"Number of normal instances in Test Data: {test_normal_count}")
 
 # Merge the datasets
-combined_df = pd.concat([df_train, df_test], axis=0).reset_index(drop=True)
-print("Combined Data Shape:", combined_df.shape)
-
-# Separate normal and anomalous data
-normal_data = combined_df[combined_df[0] == normal_label]
-anomalous_data = combined_df[combined_df[0] != normal_label]
+df = pd.concat([Train_df, Test_df], ignore_index=True)
+df.to_csv('../ECG5000_Dataset/Combined_data.csv', index=False, header=False)
+df.head()
+df.info()
+df.describe()
+df.isnull().sum()
+df.dropna(inplace=True)
