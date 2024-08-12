@@ -1,11 +1,11 @@
 #Libraries
 import warnings
-
+from src.C_Pre_Processing import scaler, test_data, train_series, val_series
 warnings.filterwarnings('ignore')
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
+from src.B_graphs import abnormal_data
 from darts import TimeSeries
 from darts.metrics import mae, rmse
 from darts.ad import ForecastingAnomalyModel, KMeansScorer, NormScorer

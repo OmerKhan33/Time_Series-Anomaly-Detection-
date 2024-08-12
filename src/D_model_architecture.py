@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import Callback
-from src.v3 import train_series, val_series
+from src.C_Pre_Processing import train_series, val_series
 from torch.optim import Adam
 
 # Model Architecture
