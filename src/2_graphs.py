@@ -72,7 +72,6 @@ axs[1].legend()
 # Display the plot
 plt.show()
 
-# %%
 # Assuming ecg_signals contains the normal data
 normal_signals = normal_data.iloc[:, 1:]  # Adjust the slicing as per your data structure
 selected_normal_signal = normal_signals.iloc[random.randint(0, len(normal_signals) - 1)]
@@ -81,15 +80,6 @@ selected_normal_signal = normal_signals.iloc[random.randint(0, len(normal_signal
 abnormal_signals = abnormal_data.iloc[:, 1:]  # Adjust the slicing as per your data structure
 selected_abnormal_signal = abnormal_signals.iloc[random.randint(0, len(abnormal_signals) - 1)]
 
-# Plotting both normal and abnormal signals on the same plot
-plt.figure(figsize=(10, 5))
-plt.plot(selected_normal_signal, label='Normal ECG Signal', color='blue')
-plt.plot(selected_abnormal_signal, label='Abnormal ECG Signal', color='red')
-plt.xlabel('Time (Sample Points)')
-plt.ylabel('Amplitude')
-plt.title('Comparison of Normal and Abnormal ECG Signals')
-plt.legend()
-plt.show()
 
 # Histogram
 plt.figure(figsize=(10, 5))
@@ -130,13 +120,6 @@ plt.title('Density Plot of ECG Signal Amplitudes')
 plt.legend()
 plt.show()
 
-# HEATMAP PLOTTING
-plt.figure(figsize=(10, 5))
-sns.heatmap(normal_data.iloc[:10, :], cmap='viridis')
-plt.xlabel('Time (Sample Points)')
-plt.ylabel('ECG Signal Index')
-plt.title('Heatmap of Normal ECG Signals')
-plt.show()
 
 
 # Create a DataFrame for plotting
