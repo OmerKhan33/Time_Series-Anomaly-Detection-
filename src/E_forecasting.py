@@ -1,6 +1,8 @@
 #Libraries
 import warnings
-from src.C_Pre_Processing import scaler, test_data, train_series, val_series
+from src.C_Pre_Processing import scaler, test_data, train_series, val_series, test_series
+from src.D_model_architecture import ecg_model
+
 warnings.filterwarnings('ignore')
 import pandas as pd
 import numpy as np
