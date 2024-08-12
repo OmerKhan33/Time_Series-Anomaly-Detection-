@@ -9,6 +9,7 @@ from sklearn.preprocessing import RobustScaler
 
 
 
+
 #  Remove Label column
 normal_data.drop(normal_data.columns[0], axis=1, inplace=True)
 abnormal_data.drop(abnormal_data.columns[0], axis=1, inplace=True)
