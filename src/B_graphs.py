@@ -1,30 +1,60 @@
-# EXTRACTING NORMAL AND ABNORMAL DATA
+"""
+This script processes ECG5000 dataset files to analyze and visualize ECG signals. The steps performed are as follows:
+
+1. **Data Preparation:**
+   - Reads ECG training and test data from text files.
+   - Merges the training and test datasets into a single DataFrame.
+   - Saves the combined dataset to a new CSV file.
+   - Separates the combined data into normal and abnormal categories based on label values and saves these subsets as separate CSV files.
+
+2. **Data Visualization:**
+   - Plots all ECG signals from the combined dataset.
+   - Plots ECG signals specifically for normal data.
+   - Selects and plots individual normal and abnormal ECG signals for comparison.
+   - Generates density plots to visualize the distribution of ECG signal amplitudes for normal and abnormal data.
+   - Creates a boxplot to compare the amplitude distributions of normal and abnormal ECG signals.
+   - Plots a time series graph for a subset of ECG signals to observe their behavior over time.
+   - Generates a pair plot to explore relationships between multiple ECG signals and visualize potential correlations.
+
+The code includes various types of plots to facilitate the analysis and understanding of the ECG signals, providing insights into both individual and comparative signal behaviors.
+"""
+
+
 import random
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
+# Read training and test data from text files
 Train_df = pd.read_csv("../ECG5000_Dataset/ECG5000_TRAIN.txt", delimiter='\s+', header=None)
 Test_df = pd.read_csv("../ECG5000_Dataset/ECG5000_TEST.txt", delimiter='\s+', header=None)
 
-# Merge the datasets
+# Merge the training and test datasets
 df = pd.concat([Train_df, Test_df], ignore_index=True)
+
+# Save the combined dataset to a new CSV file
 df.to_csv('../ECG5000_Dataset/Combined_data.csv', index=False, header=False)
-df.head()
-df.info()
-df.describe()
-df.isnull().sum()
+
+# Display basic information and summary statistics of the combined dataset
+print(df.head())
+print(df.info())
+print(df.describe())
+
+# Remove any rows with missing values
 df.dropna(inplace=True)
 
+# Separate the data into normal and abnormal categories
 normal_data = df.loc[df[0] == 1]
 abnormal_data = df.loc[df[0] != 1]
-normal_data.to_csv('../ECG5000_Dataset/normal data.csv', index=False)
-abnormal_data.to_csv('../ECG5000_Dataset/abnormal data.csv', index=False)
 
+# Save normal and abnormal data to separate CSV files
+normal_data.to_csv('../ECG5000_Dataset/normal_data.csv', index=False)
+abnormal_data.to_csv('../ECG5000_Dataset/abnormal_data.csv', index=False)
 
-               #PLOTS
-# ECG SIGNALS WITH NORMAL AND ABNORMAL DATA.
-ecg_signals = df.iloc[:, 1:]
+# PLOTTING
+
+# Plot all ECG signals from the combined dataset
+ecg_signals = df.iloc[:, 1:]  # Exclude the first column which contains labels
 plt.figure(figsize=(20, 30))
 for index, row in ecg_signals.iterrows():
     plt.plot(row, label=f'Signal {index + 1}')
@@ -33,9 +63,8 @@ plt.ylabel('Amplitude')
 plt.title('ECG Signals')
 plt.show()
 
-# ECG SIGNALS WITH NORMAL DATA
-ecg_signals = normal_data.iloc[:, 1:]
-
+# Plot only normal ECG signals
+ecg_signals = normal_data.iloc[:, 1:]  # Exclude the first column which contains labels
 plt.figure(figsize=(20, 30))
 for index, row in ecg_signals.iterrows():
     plt.plot(row, label=f'Signal {index + 1}')
@@ -44,113 +73,57 @@ plt.ylabel('Amplitude')
 plt.title('Normal ECG Signals')
 plt.show()
 
-# Assuming normal_data contains the normal ECG signals
-normal_signals = normal_data.iloc[:, 1:]  # Adjust the slicing as per your data structure
+# Randomly select and plot one normal and one abnormal ECG signal
+normal_signals = normal_data.iloc[:, 1:]  # Exclude the first column
 selected_normal_signal = normal_signals.iloc[random.randint(0, len(normal_signals) - 1)]
 
-# Assuming abnormal_data contains the abnormal ECG signals
-abnormal_signals = abnormal_data.iloc[:, 1:]  # Adjust the slicing as per your data structure
+abnormal_signals = abnormal_data.iloc[:, 1:]  # Exclude the first column
 selected_abnormal_signal = abnormal_signals.iloc[random.randint(0, len(abnormal_signals) - 1)]
 
-# Create subplots
+# Create subplots to compare one normal and one abnormal ECG signal
 fig, axs = plt.subplots(1, 2, figsize=(15, 5))
 
-# Plot the SINGLE normal ECG signal
+# Plot the selected normal ECG signal
 axs[0].plot(selected_normal_signal, label='Normal ECG Signal', color='blue')
 axs[0].set_xlabel('Time (Sample Points)')
 axs[0].set_ylabel('Amplitude')
 axs[0].set_title('Normal ECG Signal')
 axs[0].legend()
 
-# Plot the SINGLE abnormal ECG signal
+# Plot the selected abnormal ECG signal
 axs[1].plot(selected_abnormal_signal, label='Abnormal ECG Signal', color='red')
 axs[1].set_xlabel('Time (Sample Points)')
 axs[1].set_ylabel('Amplitude')
 axs[1].set_title('Abnormal ECG Signal')
 axs[1].legend()
 
-# Display the plot
 plt.show()
 
-# Assuming ecg_signals contains the normal data
-normal_signals = normal_data.iloc[:, 1:]  # Adjust the slicing as per your data structure
-selected_normal_signal = normal_signals.iloc[random.randint(0, len(normal_signals) - 1)]
-
-# Assuming ecg_signals contains the abnormal data
-abnormal_signals = abnormal_data.iloc[:, 1:]  # Adjust the slicing as per your data structure
-selected_abnormal_signal = abnormal_signals.iloc[random.randint(0, len(abnormal_signals) - 1)]
-
-
-# Histogram
-'''
-plt.figure(figsize=(10, 5))
-plt.hist(normal_data, bins=75, alpha=0.7, label='Normal ECG Signal')
-plt.hist(abnormal_data, bins=75, alpha=0.7, label='Abnormal ECG Signal')
-plt.xlabel('Amplitude')
-plt.ylabel('Frequency')
-plt.title('Histogram of ECG Signal Amplitudes')
-plt.legend()
-plt.show()
-'''
-
-# Density PLOt
+# Generate density plots for ECG signal amplitudes
 plt.figure(figsize=(10, 5))
 
-# Plot density for normal ECG signals without labels in the legend
-sns.kdeplot(normal_data, fill=True, alpha=0.5, color='blue', legend=False)
+# Plot density for normal ECG signals
+sns.kdeplot(normal_data.iloc[:, 1:].values.flatten(), fill=True, alpha=0.5, color='blue', legend=False)
 
-# Plot density for abnormal ECG signals without labels in the legend
-sns.kdeplot(abnormal_data, fill=True, alpha=0.5, color='red', legend=False)
+# Plot density for abnormal ECG signals
+sns.kdeplot(abnormal_data.iloc[:, 1:].values.flatten(), fill=True, alpha=0.5, color='red', legend=False)
 
 plt.xlabel('Amplitude')
 plt.ylabel('Density')
 plt.title('Density Plot of ECG Signal Amplitudes')
 plt.show()
 
+# Combine and flatten all normal and abnormal ECG signal amplitudes
+normal_combined = normal_data.iloc[:, 1:].values.flatten()
+abnormal_combined = abnormal_data.iloc[:, 1:].values.flatten()
 
-# Combine all columns of normal and abnormal data into single series
-normal_combined = normal_data.values.flatten()
-abnormal_combined = abnormal_data.values.flatten()
-
-# Plotting the density plots
+# Plot density plots for combined normal and abnormal signal amplitudes
 plt.figure(figsize=(10, 5))
 sns.kdeplot(normal_combined, label='Normal ECG Signal', fill=True, alpha=0.5, color='blue')
 sns.kdeplot(abnormal_combined, label='Abnormal ECG Signal', fill=True, alpha=0.5, color='red')
 plt.xlabel('Amplitude')
 plt.ylabel('Density')
-plt.title('Density Plot of ECG Signal Amplitudes')
+plt.title('Density Plot of Combined ECG Signal Amplitudes')
 plt.legend()
 plt.show()
 
-
-
-# Create a DataFrame for plotting
-boxplot_data = pd.DataFrame({
-    'Amplitude': pd.concat([selected_normal_signal, selected_abnormal_signal]),
-    'Type': ['Normal'] * len(selected_normal_signal) + ['Abnormal'] * len(selected_abnormal_signal)
-})
-
-plt.figure(figsize=(20, 20))
-
-'''
-# Basic Boxplot
-plt.subplot(1, 2, 1)
-sns.boxplot(x='Type', y='Amplitude', data=boxplot_data, palette='Set2')
-plt.title('Basic Boxplot of ECG Signal Amplitudes')
-
-# Detailed Boxplot
-plt.subplot(1, 2, 2)
-sns.boxplot(x='Type', y='Amplitude', data=boxplot_data, palette='Set2', showfliers=False)
-sns.swarmplot(x='Type', y='Amplitude', data=boxplot_data, color='k', alpha=0.5, dodge=True)
-
-# Add mean markers
-mean_values = boxplot_data.groupby('Type')['Amplitude'].mean()
-for i, mean in enumerate(mean_values):
-    plt.scatter(x=i, y=mean, color='red', marker='D', s=100, label='Mean' if i == 0 else "", zorder=10)
-
-plt.title('Detailed Boxplot of ECG Signal Amplitudes')
-plt.legend()
-
-plt.tight_layout()
-plt.show()
-'''
