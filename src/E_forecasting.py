@@ -166,6 +166,7 @@ def calculate_anomaly_scores_by_chunk(time_index, scores, chunk_size, threshold=
 chunk_anomalies, chunk_scores = calculate_anomaly_scores_by_chunk(time_index, scores, chunk_size)
 
 # Plot the anomaly scores
+
 plt.figure(figsize=(12, 6))
 plt.plot(time_index, chunk_scores, label="Anomaly Scores")
 plt.scatter(time_index[chunk_anomalies], chunk_scores[chunk_anomalies], color='red', label="Detected Anomalies")
@@ -174,6 +175,7 @@ plt.ylabel('Score')
 plt.title('Anomaly Scores with Detected Anomalies (by Chunks)')
 plt.legend()
 plt.show()
+
 
 # Print the indices of detected anomalies
 print("Anomaly indices:", np.where(chunk_anomalies)[0])
@@ -283,25 +285,3 @@ plt.ylabel('ECG Value')
 plt.title('ECG Chunk with Normal and Anomalous Segments')
 plt.show()
 
-
-# Select an original ECG signal from the test series for prediction
-original_signal = test_series[0]  # Assuming we're predicting the first series in the test set
-
-# Use the trained TCN model to predict the next points in the series
-predicted_signal = ecg_model.predict(n=len(original_signal), series=original_signal)
-
-# Plot the original and predicted signals
-plt.figure(figsize=(14, 7))
-
-# Plot original ECG signal
-plt.plot(original_signal.time_index, original_signal.values(), label='Original ECG Signal', color='blue')
-
-# Plot predicted ECG signal
-plt.plot(predicted_signal.time_index, predicted_signal.values(), label='Predicted ECG Signal', color='orange', linestyle='--')
-
-plt.xlabel('Time')
-plt.ylabel('Amplitude')
-plt.title('Original vs Predicted ECG Signal')
-plt.legend()
-plt.grid(True)
-plt.show()

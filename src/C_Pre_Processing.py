@@ -1,4 +1,7 @@
 import warnings
+
+from src.B_graphs import normal_data, abnormal_data
+
 warnings.filterwarnings('ignore')
 import pandas as pd
 import numpy as np
