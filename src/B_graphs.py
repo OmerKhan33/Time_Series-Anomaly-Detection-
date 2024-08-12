@@ -82,6 +82,7 @@ selected_abnormal_signal = abnormal_signals.iloc[random.randint(0, len(abnormal_
 
 
 # Histogram
+'''
 plt.figure(figsize=(10, 5))
 plt.hist(normal_data, bins=75, alpha=0.7, label='Normal ECG Signal')
 plt.hist(abnormal_data, bins=75, alpha=0.7, label='Abnormal ECG Signal')
@@ -90,6 +91,7 @@ plt.ylabel('Frequency')
 plt.title('Histogram of ECG Signal Amplitudes')
 plt.legend()
 plt.show()
+'''
 
 # Density PLOt
 plt.figure(figsize=(10, 5))
@@ -130,6 +132,7 @@ boxplot_data = pd.DataFrame({
 
 plt.figure(figsize=(20, 20))
 
+'''
 # Basic Boxplot
 plt.subplot(1, 2, 1)
 sns.boxplot(x='Type', y='Amplitude', data=boxplot_data, palette='Set2')
@@ -150,3 +153,4 @@ plt.legend()
 
 plt.tight_layout()
 plt.show()
+'''

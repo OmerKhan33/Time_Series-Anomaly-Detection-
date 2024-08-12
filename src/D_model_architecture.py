@@ -1,3 +1,4 @@
+
 from darts.models import TCNModel
 from matplotlib import pyplot as plt
 from pytorch_lightning import Trainer
@@ -8,7 +9,7 @@ from torch.optim import Adam
 
 # Model Architecture
 class LossLoggingCallback(Callback):
-    def _init_(self):
+    def __init__(self):
         self.metrics = {"epochs": [], "train_loss": [], "val_loss": []}
         self.train_losses = []
         self.val_losses = []
@@ -51,7 +52,7 @@ ecg_model = TCNModel(
 # Define the EarlyStopping callback
 early_stopping_callback = EarlyStopping(
     monitor="val_loss",  # Metric to monitor
-    patience=10,  # Number of epochs to wait for improvement
+    patience=3,  # Number of epochs to wait for improvement
     mode="max"  # Mode should be 'min' for loss metrics
 )
 
@@ -91,3 +92,5 @@ plt.title('Training and Validation Loss Over Epochs')
 plt.legend()
 plt.grid(True)
 plt.show()
+
+ecg_model.save("../ECG5000_Dataset/Model.pth.tar")

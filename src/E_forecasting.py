@@ -2,19 +2,33 @@
 import warnings
 from src.C_Pre_Processing import scaler, test_data, train_series, val_series, test_series
 from src.D_model_architecture import ecg_model
-
+from darts.models import TCNModel
 warnings.filterwarnings('ignore')
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from src.B_graphs import abnormal_data
+from src.B_graphs import abnormal_data, df
 from darts import TimeSeries
 from darts.metrics import mae, rmse
 from darts.ad import ForecastingAnomalyModel, KMeansScorer, NormScorer
 
+# Checking that model loads successfully
+
+from darts.models import TCNModel
+from darts.timeseries import TimeSeries
+
+# Load the TCN model
+try:
+    model = TCNModel.load('../ECG5000_Dataset/Model.pth.tar')  # Replace with your actual model file path
+    print("Model loaded successfully.")
+except Exception as e:
+    print(f"Error loading model: {e}")
+    model = None
+
 
 
 #Forecasting Anomaly Model
+
 abnormal_features_scaled = scaler.transform(abnormal_data)
 abnormal_data_scaled = pd.DataFrame(abnormal_features_scaled, columns=test_data.columns)
 
