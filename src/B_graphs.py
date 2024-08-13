@@ -12,9 +12,7 @@ This script processes ECG5000 dataset files to analyze and visualize ECG signals
    - Plots ECG signals specifically for normal data.
    - Selects and plots individual normal and abnormal ECG signals for comparison.
    - Generates density plots to visualize the distribution of ECG signal amplitudes for normal and abnormal data.
-   - Creates a boxplot to compare the amplitude distributions of normal and abnormal ECG signals.
-   - Plots a time series graph for a subset of ECG signals to observe their behavior over time.
-   - Generates a pair plot to explore relationships between multiple ECG signals and visualize potential correlations.
+
 
 The code includes various types of plots to facilitate the analysis and understanding of the ECG signals, providing insights into both individual and comparative signal behaviors.
 """
